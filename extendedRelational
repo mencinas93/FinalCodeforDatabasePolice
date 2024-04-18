@@ -1,0 +1,173 @@
+
+DROP TABLE IF EXISTS Police_Extended.Officer_Assigned_Location CASCADE;
+DROP TABLE IF EXISTS Police_Extended.Rank CASCADE;
+DROP TABLE IF EXISTS Police_Extended.Speciality CASCADE;
+DROP TABLE IF EXISTS Police_Extended.Citations CASCADE;
+DROP TABLE IF EXISTS Police_Extended.Offenders CASCADE;
+DROP TABLE IF EXISTS Police_Extended.Court CASCADE;
+DROP TABLE IF EXISTS Police_Extended.Officers CASCADE;
+DROP TABLE IF EXISTS Police_Extended.Police_Location CASCADE;
+
+
+
+CREATE SCHEMA Police_Extended;
+SET search_path TO Police_Extended;
+
+
+CREATE TYPE StationType AS ENUM ('Station', 'Headquarters');
+
+CREATE TYPE Offense AS (
+    category varchar(30),
+    offense_name varchar(30)
+);
+
+
+create table Police_Location (
+    Location_ID serial PRIMARY KEY,
+    Department StationType NOT NULL,
+    Name varchar(30) NOT NULL,
+    Phone char(10),
+    Address varchar(30),
+    City varchar(20),
+    CONSTRAINT CHK_Police_Name_Location CHECK (Name IS NOT NULL AND Address IS NOT NULL AND City IS NOT NULL),
+    CONSTRAINT CHK_Department CHECK (Department IN ('Station', 'Headquarters'))
+);
+
+
+
+CREATE TABLE Citations (
+    Citation_ID serial PRIMARY KEY,
+    Offense Offense[],
+    Date_Crime_Occurred DATE,
+    Time_Crime_Occurred TIMESTAMP,
+    Crime_Address VARCHAR(30),
+    City_Crime_Occurred VARCHAR(30),
+    State_Crime_Occurred CHAR(2)
+);
+
+
+Create table Offenders
+(
+    Offender_ID serial PRIMARY KEY,
+    First_Name varchar(30) not null,
+    Last_Name varchar (30) not null,
+    Phone char (10),
+    Offender_Address varchar (30),
+    State char (2),
+    Date_Of_Birth Date,
+    License varchar(20),
+    License_State char(20),
+    Citation_ID smallint,
+
+    CONSTRAINT FK_Offenders_Citation
+    FOREIGN KEY (Citation_ID) REFERENCES Citations(Citation_ID)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+    CONSTRAINT CHK_Offender_Name_DateOfBirth
+    CHECK (First_Name IS NOT NULL AND Last_Name IS NOT NULL AND Date_Of_Birth IS NOT NULL)
+);
+
+
+
+
+
+create table Officers
+(
+    Officer_Badge_ID smallint primary key,
+    First_Name varchar(20) not null,
+    Last_Name varchar(20) not null,
+    Phone char(10),
+    Employee_Address varchar(30),
+    City varchar(20),
+    State char(2),
+    Date_Of_Birth Date not null,
+    Officer_Skills varchar(30)[] DEFAULT ARRAY[]::varchar[],
+    Citation_ID smallint,
+    
+    Taser_Serial_Number CHAR(7),
+    Taser_Make varchar(20) not null,
+    Taser_Model varchar (20) not null,
+
+    Firearm_Serial_Number Char(8),
+    Firearm_Make varchar(20) not null,
+    Firearm_Model varchar (20) not null,
+    Firearm_Caliber varchar(20) not null,
+
+    Body_Camera_ID smallint,
+    Body_Camera_Brand varchar(20) not null,
+    Body_Camera_Model Varchar(10) not null,
+
+
+    Vehicle_ID smallint,
+    Plate_Number varchar(6) UNIQUE not null,
+    Color varchar(15),
+    Car_Year char(4) not null,
+    Make_and_Model varchar(20) not null,
+    Registration_State char(2) not null,
+    Registration_Expires Date,
+    CONSTRAINT CHK_Vehicle_PlateYearMakeModel CHECK (Plate_Number IS NOT NULL AND 
+    Car_Year IS NOT NULL AND Make_and_Model IS NOT NULL),
+
+    constraint FK_Officer_Citation
+    FOREIGN KEY (Citation_ID) REFERENCES Citations(Citation_ID)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+    CONSTRAINT CHK_Officer_Name_DateOfBirth CHECK (First_Name IS NOT NULL AND
+    Last_Name IS NOT NULL AND Date_Of_Birth IS NOT NULL)
+    );
+
+
+create table Rank
+(
+    Rank_ID serial PRIMARY KEY,
+    Rank_Title varchar(30) not null,
+    Salary decimal(10,2),
+    Officer_Badge_ID smallint,
+    constraint FK_Officer_RANK_BADGE_ID
+    FOREIGN KEY (Officer_Badge_ID) references Officers(Officer_Badge_ID)
+
+);
+
+create table Speciality
+(
+    Speciality_ID serial PRIMARY KEY,
+    Speciality_Name Varchar(30) not null,
+    Officer_Badge_ID smallint,
+    constraint FK_OFFICER_SPECIALITY_BADGE_ID
+    FOREIGN KEY (Officer_Badge_ID) REFERENCES Officers(Officer_Badge_ID)
+);
+
+
+
+
+
+create table Officer_Assigned_Location(
+    Location_ID smallint,
+    Officer_Badge_ID smallint,
+    Start_Date DATE not null,
+    End_Date DATE,
+    CONSTRAINT PK_OAL PRIMARY KEY (Officer_Badge_ID, Location_ID, Start_Date),
+    CONSTRAINT FK_OAL_Location FOREIGN KEY (Location_ID) REFERENCES Police_Location(Location_ID),
+    CONSTRAINT FK_Officer FOREIGN KEY (Officer_Badge_ID) REFERENCES Officers(Officer_Badge_ID)
+);
+
+
+create table Court
+(
+    Court_ID serial PRIMARY KEY,
+    Citation_ID smallint,
+    Court_Date DATE not null,
+    Court_Time timestamp not null,
+    Court_Name varchar(30) not null,
+    Court_Address varchar(30) not null,
+    Phone char(10),
+    constraint C_CITATION_ID
+    foreign key (Citation_ID) references Citations(Citation_ID)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+    CONSTRAINT CHK_Court_Date_Time_Report_Address CHECK (Court_Date IS NOT NULL 
+    AND Court_Time IS NOT NULL AND Citation_ID IS NOT NULL AND Court_Name IS NOT NULL)
+);
+
