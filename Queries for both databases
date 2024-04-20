@@ -1,0 +1,162 @@
+SET search_path TO Police_Relational;
+
+Select CONCAT(O.First_Name, ' ', O.Last_Name) AS Officers_Name, R.Rank_Title as Rank,
+COALESCE(S.Station_Name, H.Headquarters_Name) AS Assigned_Location
+From Officers O
+Join Rank R On O.Officer_Badge_Id = R.Officer_Badge_ID
+LEFT JOIN Officer_Assigned_Station OAS ON O.Officer_Badge_ID = OAS.Officer_Badge_ID
+LEFT JOIN Stations S ON OAS.Station_ID = S.Patrol_Station_ID
+LEFT JOIN Detective_Assigned_Headquarters DAH ON O.Officer_Badge_ID = DAH.Officer_Badge_ID
+LEFT JOIN Headquarters H ON DAH.Headquarters_ID = H.Headquarters_ID
+ORDER BY COALESCE(S.Station_Name, H.Headquarters_Name);
+
+
+SELECT O.Offense_Name, COUNT(*) AS Frequency
+FROM Offenses O
+JOIN Citations C ON O.Offense_ID = C.Offense_ID
+WHERE 
+    C.Date_Crime_Occurred BETWEEN '2024-04-01' AND '2024-04-30'
+GROUP BY O.Offense_Name
+ORDER BY Frequency DESC;
+
+
+SELECT 
+    CONCAT(O.First_Name, ' ', O.Last_Name) AS Officer_Name,
+    R.Rank_Title as Rank,
+    S.SKILL_Name as Skill,
+    SP.Speciality_Name as Speciality
+FROM 
+    Officers O
+LEFT JOIN 
+    Rank R ON O.Officer_Badge_ID = R.Officer_Badge_ID
+LEFT JOIN 
+    Officers_Skills OS ON O.Officer_Badge_ID = OS.Officer_Badge_ID
+LEFT JOIN 
+    Skill S ON OS.Skill_ID = S.Skill_ID
+LEFT JOIN 
+    Speciality SP ON O.Officer_Badge_ID = SP.Officer_Badge_ID;
+
+
+
+SELECT 
+    CONCAT(OF.First_Name, ' ', OF.Last_Name) AS Offender_Name,
+    OF.Date_Of_Birth AS Offender_Date_Of_Birth,
+    O.Offense_Name As Committed_Offense,
+    C.Date_Crime_Occurred AS Offense_Date,
+    CT.Court_Time,
+    CT.Court_name,
+    CT.Court_Address,
+	CONCAT(OFF.First_Name, ' ', OFF.Last_Name) AS Officer_Name
+FROM 
+    Offenders OF
+JOIN 
+    Citations C ON OF.Citation_ID = C.Citation_ID
+JOIN 
+    Offenses O ON C.Offense_ID = O.Offense_ID
+LEFT JOIN 
+    Court CT ON C.Citation_ID = CT.Citation_ID
+LEFT JOIN
+    Officers OFF ON C.Citation_ID = OFF.Citation_ID;
+
+
+
+SELECT 
+    CONCAT(OF.First_Name, ' ', OF.Last_Name) AS Officer_Name,
+    OF.Body_Camera_ID AS Body_Camera_ID,
+    OF.Taser_Serial_Number AS Taser_Serial_Number,
+    OF.Firearm_Serial_Number AS Firearm_Serial_Number,
+    OF.Vehicle_ID AS Vehicle_ID,
+    BC.Brand AS Body_Camera_Brand,
+    T.Make AS Taser_Make,
+    F.Make AS Firearm_Make,
+    F.Model AS Firearm_Model,
+    V.Plate_Number AS Vehicle_Plate_Number,
+    V.Make_and_Model AS Vehicle_Make_and_Model
+FROM 
+    Officers OF
+LEFT JOIN 
+    Body_Cameras BC ON OF.Body_Camera_ID = BC.Body_Camera_ID
+LEFT JOIN 
+    Tasers T ON OF.Taser_Serial_Number = T.Taser_Serial_Number
+LEFT JOIN 
+    Firearms F ON OF.Firearm_Serial_Number = F.Firearm_Serial_Number
+LEFT JOIN 
+    Vehicles V ON OF.Vehicle_ID = V.Vehicle_ID;
+
+
+
+SET search_path TO Police_Extended;
+
+
+
+SELECT CONCAT(O.First_Name, ' ', O.Last_Name) AS Officer_Name,
+       R.Rank_Title AS Rank,
+       PL.Name AS Assigned_Location
+FROM Officers O
+JOIN Rank R ON O.Officer_Badge_ID = R.Officer_Badge_ID
+LEFT JOIN Officer_Assigned_Location OAL ON O.Officer_Badge_ID = OAL.Officer_Badge_ID
+LEFT JOIN Police_Location PL ON OAL.Location_ID = PL.Location_ID
+ORDER BY PL.Name;
+
+
+SELECT offense.offense_name AS Offense_Name,
+       COUNT(*) AS Frequency
+FROM Citations C
+CROSS JOIN LATERAL UNNEST(C.Offense) AS offense(offense_category, offense_name)
+WHERE C.Date_Crime_Occurred BETWEEN '2024-04-01' AND '2024-04-30'
+GROUP BY offense.offense_name
+ORDER BY Frequency DESC;
+
+
+SELECT 
+    CONCAT(O.First_Name, ' ', O.Last_Name) AS Officer_Name,
+    R.Rank_Title AS Rank,
+    (
+        SELECT STRING_AGG(skill, ', ')
+        FROM UNNEST(O.Officer_Skills) skill
+    ) AS Skills,
+    SP.Speciality_Name AS Speciality
+FROM 
+    Officers O
+LEFT JOIN 
+    Rank R ON O.Officer_Badge_ID = R.Officer_Badge_ID
+LEFT JOIN 
+    Speciality SP ON O.Officer_Badge_ID = SP.Officer_Badge_ID;
+
+
+
+SELECT 
+    CONCAT(O.First_Name, ' ', O.Last_Name) AS Offender_Name,
+    O.Date_Of_Birth AS Offender_Date_Of_Birth,
+    (UNNEST(C.Offense)).offense_name AS Committed_Offense,
+    C.Date_Crime_Occurred AS Offense_Date,
+    CO.Court_Time,
+    CO.Court_Name,
+    CO.Court_Address,
+    CONCAT(OFF.First_Name, ' ', OFF.Last_Name) AS Officer_Name
+FROM 
+    Offenders O
+JOIN 
+    Citations C ON O.Citation_ID = C.Citation_ID
+LEFT JOIN 
+    Court CO ON C.Citation_ID = CO.Citation_ID
+LEFT JOIN 
+    Officers OFF ON C.Citation_ID = OFF.Citation_ID;
+
+
+
+SELECT 
+    CONCAT(First_Name, ' ', Last_Name) AS Officer_Name,
+    Body_Camera_ID,
+	Body_Camera_Brand,
+    Taser_Serial_Number,
+	Taser_Make,
+    Taser_Model,
+    Firearm_Serial_Number,
+	Firearm_Make,
+    Firearm_Model,
+    Vehicle_ID,
+    Plate_Number,
+    Make_and_Model
+FROM 
+    Officers 
